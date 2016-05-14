@@ -1,0 +1,114 @@
+---
+title: "Activity prediction using sensor data"
+author: "Dominic Tabeta"
+date: "May 14, 2016"
+output: html_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+## Executive Summary
+
+This project uses sensor data taken from activity sensors labelled with activity types and trains a machine learning model that predicts activity types using this sensor data as predictors. We also carry out cross validation within the training set.
+
+## Data Source
+The source for the training data set: https://d396qusza40orc.cloudfront.net/predmachlearn/pml-training.csv
+
+The source for the test data set: https://d396qusza40orc.cloudfront.net/predmachlearn/pml-testing.csv
+
+The data for this project originated from here:
+http://groupware.les.inf.puc-rio.br/har
+
+## Initial Library setup
+
+```{r initialsetup,echo=TRUE}
+library(caret)
+library(rpart)
+library(randomForest)
+library(rpart.plot)
+library(rattle)
+```
+
+## Data loading
+
+```{r loadingandpreprocessing}
+setwd("~/datascience/pmlproject")
+trainurl<-"https://d396qusza40orc.cloudfront.net/predmachlearn/pml-training.csv"
+testurl<-"https://d396qusza40orc.cloudfront.net/predmachlearn/pml-testing.csv"
+trainfile <- "../data/pml-training.csv"
+
+if (!file.exists(trainfile)) {
+        download.file(trainurl,destfile=trainfile,quiet=TRUE,mode="wb")
+}
+testfile <- "../data/pml-testing.csv"
+if (!file.exists(testfile)) {
+        download.file(testurl,destfile=testfile,quiet=TRUE,mode="wb")
+}
+
+traindata <- read.csv((trainfile), na.strings=c("NA","#DIV/0!",""))
+testdata <- read.csv((testfile), na.strings=c("NA","#DIV/0!",""))
+```
+
+## Reproducibility
+
+FOr reproducibility we set the random number seed here
+``` {r setseed}
+set.seed(123)
+```
+
+## Partitioning the training data set
+
+For assessment of the machine learning models prior to application on the final test set I partition the training set here. The training-test split selected is 80-20.
+``` {r partition}
+selecttrain<-createDataPartition(y=traindata$classe,p=0.8,list=FALSE)
+mytrain<-traindata[selecttrain,]
+mytest<-traindata[-selecttrain,]
+```
+
+## Data Processing/Cleaning
+We remove the index column and any variables that have zero variance from the mytrain and mytest datasets. Also we remove the columns that have over 97% missing values.
+``` {r cleaning}
+nzv <- nearZeroVar(mytrain, saveMetrics=TRUE)
+mytrainclean<-mytrain[,row.names(nzv[nzv$percentUnique>0&nzv$percentUnique<100,])]
+
+
+nacheck<-apply(mytrainclean,2,is.na)
+
+nasum<-apply(nacheck,2,sum)
+naprop<-nasum/nrow(mytrainclean)
+
+mytrainclean<-mytrainclean[,names(naprop[naprop<.95])]
+
+mytestclean<-mytest[,colnames(mytrainclean)]
+testfinal<-testdata[,colnames(mytrainclean[-59])]
+
+dim(mytrainclean)
+dim(mytestclean)
+dim(testfinal)
+```
+
+## Prediction model using Decision Trees (rpart)
+``` {r rpartmodel}
+model1 <- rpart(mytrain$classe ~ ., data=mytrainclean[-59], method="class")
+fancyRpartPlot(model1)
+prediction1 <- predict(model1, mytestclean, type = "class")
+confusionMatrix(prediction1, mytest$classe)
+```
+
+## Prediction model using Random Forest
+``` {r randomForest}
+model2 <- randomForest(mytrain$classe ~. , data=mytrainclean[-59])
+prediction2 <- predict(model2, mytestclean, type = "class")
+confusionMatrix(prediction2, mytest$classe)
+```
+
+## Applying predictor models to the given test data
+
+```{r finaltest}
+prediction3<-predict(model2,cbind(testfinal,classe=rep("A",20)),type="class")
+confusionMatrix(prediction3,testfinal$classe)
+```
+
+Note that the `echo = FALSE` parameter was added to the code chunk to prevent printing of the R code that generated the plot.
