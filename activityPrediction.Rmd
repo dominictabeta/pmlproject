@@ -90,7 +90,7 @@ dim(testfinal)
 ```
 
 ## Prediction model using Decision Trees (rpart)
-For the first prediction model we apply the rpart function to create a decision tree, and afterwards call fancyRPartPlot to visualise the tree.
+For the first prediction model we apply the rpart function to create a decision tree, and afterwards call fancyRPartPlot to visualise the tree. I chose rpart as one of the prediction models due to its easier interpretability which makes it a good starting point.
 ``` {r rpartmodel}
 model1 <- rpart(classe ~ ., data=mytrainclean, method="class")
 fancyRpartPlot(model1)
@@ -107,7 +107,7 @@ oose1<-100-accuracy1
 The confusion matrix results show an accuracy of `r accuracy1`% for the decision tree prediction model created. The expected out of sample error for this prediction model is `r oose1`%.
 
 ## Prediction model using Random Forest
-For the second prediction model we apply the randomForest() function to create a random forest prediction model.As for the first model using rpart, we then assess its performance using the confusionMatrix() function.
+For the second prediction model we apply the randomForest() function to create a random forest prediction model. Randomforest is chosen for its better performance than decision trees. As for the first model using rpart, we then assess its performance using the confusionMatrix() function.
 ``` {r randomForest}
 model2 <- randomForest(classe ~. , data=mytrainclean)
 prediction2 <- predict(model2, mytestclean, type = "class")
@@ -133,4 +133,4 @@ prediction4
 ```
 
 ## Results
-Comparing the performance of the two prediction models, we find that the random forest model has greater accuray than the decision tree model.
+Comparing the performance of the two prediction models, we find that the random forest model has greater accuracy (`r accuracy2`%) than the decision tree model (`r accuracy1`%). Despite reducing the amount of predictors from 159 to 58, we were able to achieve a high degree of accuracy using a random forest method.
