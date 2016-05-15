@@ -68,7 +68,7 @@ mytest<-traindata[-selecttrain,]
 ```
 
 ## Data Processing/Cleaning
-We remove the index column and any variables that have zero variance from the mytrain and mytest datasets. Also we remove the columns that have over 97% missing values.
+We remove the index column and any variables that have zero variance from the mytrain and mytest datasets. Also we remove the columns that have over 97% missing values. Zero variance variables are of no use as predictors. 
 ``` {r cleaning}
 nzv <- nearZeroVar(mytrain, saveMetrics=TRUE)
 mytrainclean<-mytrain[,row.names(nzv[nzv$percentUnique>0&nzv$percentUnique<100,])]
@@ -90,25 +90,47 @@ dim(testfinal)
 ```
 
 ## Prediction model using Decision Trees (rpart)
+For the first prediction model we apply the rpart function to create a decision tree, and afterwards call fancyRPartPlot to visualise the tree.
 ``` {r rpartmodel}
-model1 <- rpart(mytrain$classe ~ ., data=mytrainclean[-59], method="class")
+model1 <- rpart(classe ~ ., data=mytrainclean, method="class")
 fancyRpartPlot(model1)
-prediction1 <- predict(model1, mytestclean, type = "class")
-confusionMatrix(prediction1, mytest$classe)
 ```
 
+Below we assess the performance of the decision tree using the confusionMatrix() function.
+``` {r predict1}
+prediction1 <- predict(model1, mytestclean, type = "class")
+confusionMatrix(prediction1, mytest$classe)
+accuracy1<-confusionMatrix(prediction1, mytest$classe)$overall["Accuracy"]*100
+oose1<-100-accuracy1
+```
+
+The confusion matrix results show an accuracy of `r accuracy1`% for the decision tree prediction model created. The expected out of sample error for this prediction model is `r oose1`%.
+
 ## Prediction model using Random Forest
+For the second prediction model we apply the randomForest() function to create a random forest prediction model.As for the first model using rpart, we then assess its performance using the confusionMatrix() function.
 ``` {r randomForest}
-model2 <- randomForest(mytrain$classe ~. , data=mytrainclean[-59])
+model2 <- randomForest(classe ~. , data=mytrainclean)
 prediction2 <- predict(model2, mytestclean, type = "class")
 confusionMatrix(prediction2, mytest$classe)
+accuracy2<-confusionMatrix(prediction2, mytest$classe)$overall["Accuracy"]*100
+oose2<-100-accuracy2
 ```
+
+
+The confusion matrix results show an accuracy of `r accuracy2`% for the random forest prediction model created, which is more accurate than the decision tree prediction model created earlier. The expected out of sample error for this model is `r oose2`%.
 
 ## Applying predictor models to the given test data
 
-```{r finaltest}
-prediction3<-predict(model2,cbind(testfinal,classe=rep("A",20)),type="class")
-confusionMatrix(prediction3,testfinal$classe)
+We apply the two prediction models created to the given test data set to produce two sets of predictions. The expected out of set error for each model would be 1-Accuracy for each model's accuracy result.
+```{r finaltests}
+prediction3<-predict(model1,testfinal,type="class")
+prediction3
+
+levels(testfinal$cvtd_timestamp)<-levels(mytrainclean$cvtd_timestamp)
+levels(testfinal$new_window)<-levels(mytrainclean$new_window)
+prediction4<-predict(model2,testfinal,type="class")
+prediction4
 ```
 
-Note that the `echo = FALSE` parameter was added to the code chunk to prevent printing of the R code that generated the plot.
+## Results
+Comparing the performance of the two prediction models, we find that the random forest model has greater accuray than the decision tree model.
